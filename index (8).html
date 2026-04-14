@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DP-700 Study Console</title>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #2d3142; --bg-alt: #4f5d75; --silver: #bfc0c0; --white: #ffffff; --orange: #ef8354; --danger: #ff5f5f; --amber: #ffbf00; --font-din: "Inter", sans-serif;
+        }
+        body {
+            background: var(--bg-dark); color: var(--white); font-family: var(--font-din);
+            margin: 0; display: flex; height: 100vh; font-weight: 300; overflow: hidden;
+        }
+        .sidebar {
+            width: 280px; background: rgba(45, 49, 66, 0.95); border-right: 1px solid var(--bg-alt);
+            padding: 30px; display: flex; flex-direction: column; box-shadow: 4px 0 15px rgba(0,0,0,0.3); z-index: 10;
+        }
+        .logo { font-size: 20px; font-weight: 600; letter-spacing: 3px; margin-bottom: 40px; color: var(--orange); text-transform: uppercase; }
+        
+        /* INTEGRATED GLASS TIMER */
+        .main-timer-wrapper {
+            display: flex; align-items: center; justify-content: space-between;
+            background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(15px); 
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 15px 25px; border-radius: 4px; margin-bottom: 15px;
+        }
+        .matrix-frame {
+            line-height: 0; 
+            background: rgba(0,0,0,0.2); /* Very light blend */
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 2px;
+        }
+        .timer-controls { display: flex; flex-direction: column; gap: 8px; }
+        .timer-btn { 
+            background: var(--bg-alt); border: 1px solid rgba(255,255,255,0.1); color: white; 
+            padding: 8px 15px; border-radius: 4px; font-size: 10px; cursor: pointer; 
+            text-transform: uppercase; letter-spacing: 1px; transition: 0.2s; min-width: 95px; 
+        }
+        .timer-btn:hover { background: var(--orange); }
+        .timer-btn.active { color: var(--danger); border-color: var(--danger); }
+
+        /* UI COMPONENTS */
+        .label-sm { font-size: 11px; color: var(--silver); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .topic-stat { color: var(--orange); font-weight: 600; }
+        .reset-link { font-size: 10px; color: var(--silver); cursor: pointer; text-decoration: underline; opacity: 0.6; transition: 0.3s; }
+        
+        .select-box, .search-bar { background: var(--bg-alt); color: var(--white); border: 1px solid transparent; padding: 12px; border-radius: 4px; outline: none; margin-bottom: 20px; font-family: var(--font-din); width: 100%; box-sizing: border-box; }
+        .progress-box { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 4px; margin-top: 10px; }
+        .progress-bar-bg { background: var(--bg-dark); height: 6px; border-radius: 3px; margin-top: 8px; overflow: hidden; }
+        .progress-fill { background: var(--orange); height: 100%; width: 0%; transition: 0.5s ease; }
+
+        .btn-reset-all { background: transparent; border: 1px solid rgba(255, 95, 95, 0.3); color: var(--danger); padding: 10px; border-radius: 4px; font-size: 11px; cursor: pointer; margin-top: 20px; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; }
+
+        .main { flex: 1; overflow-y: auto; padding: 60px; background: linear-gradient(135deg, var(--bg-dark) 0%, #1e212d 100%); }
+        
+        .header-banner { 
+            background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); 
+            border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 4px; 
+            padding: 30px; margin-bottom: 40px; display: flex; justify-content: space-between; align-items: center;
+        }
+        
+        .donut-container { position: relative; width: 80px; height: 80px; }
+        .donut-svg { transform: rotate(-90deg); }
+        .donut-bg { fill: none; stroke: rgba(255,255,255,0.1); stroke-width: 4; }
+        .donut-fill { fill: none; stroke: var(--orange); stroke-width: 4; stroke-dasharray: 220; stroke-dashoffset: 220; transition: stroke-dashoffset 0.6s ease; stroke-linecap: round; }
+        .donut-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 14px; font-weight: 600; color: var(--white); }
+
+        .list-item { display: flex; align-items: center; background: rgba(191, 192, 192, 0.05); border: 1px solid rgba(191, 192, 192, 0.1); margin-bottom: 10px; padding: 15px 25px; border-radius: 4px; text-decoration: none; color: var(--silver); transition: 0.3s ease; }
+        .list-item:hover { background: var(--bg-alt); border-color: var(--orange); transform: translateX(8px); }
+        .check-btn { width: 22px; height: 22px; border: 2px solid var(--orange); border-radius: 4px; margin-right: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .check-btn.active { background: var(--orange); }
+        .check-btn.active::after { content: '✓'; color: white; font-size: 14px; font-weight: bold; }
+        .q-link { flex: 1; display: flex; align-items: center; text-decoration: none; color: inherit; }
+        .q-id { font-weight: 600; color: var(--white); width: 120px; font-size: 15px; }
+        .go-icon { color: var(--orange); font-size: 18px; margin-left: 10px; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo">FABRIC // DP-700</div>
+        <div class="label-sm">Provider / Source</div>
+        <select class="select-box" id="sourceDropdown"><option value="ExamTopics">ExamTopics (ET)</option></select>
+        <div class="label-sm">
+            <span>Domain / Topic <span class="topic-stat" id="topicPercent">0%</span></span>
+            <span class="reset-link" onclick="resetTopic()">Reset Topic</span>
+        </div>
+        <select class="select-box" id="topicDropdown">
+            <option value="Topic 1">Topic 1: Data Ingestion</option>
+            <option value="Topic 2">Topic 2: Data Modeling</option>
+            <option value="Topic 3">Topic 3: Monitor & Optimize</option>
+        </select>
+        <div class="label-sm">Search Questions</div>
+        <input type="text" class="search-bar" id="searchInput" placeholder="Filter questions...">
+        <div class="progress-box">
+            <div class="label-sm">Overall Completion</div>
+            <div id="progressText" style="font-size: 18px; color: var(--orange); font-weight: 600;">0%</div>
+            <div class="progress-bar-bg"><div class="progress-fill" id="progressFill"></div></div>
+        </div>
+        <button class="btn-reset-all" onclick="resetAll()">Reset All Progress</button>
+    </div>
+
+    <div class="main">
+        <div class="main-timer-wrapper">
+            <div class="matrix-frame">
+                <svg width="340" height="70" viewBox="0 0 340 70" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <mask id="textMask">
+                            <text id="svgTime" x="50%" y="65%" font-family="'Share Tech Mono', monospace" font-size="48" fill="white" text-anchor="middle" letter-spacing="6">00:00:00</text>
+                        </mask>
+                        <pattern id="dotGrid" x="0" y="0" width="5" height="5" patternUnits="userSpaceOnUse">
+                            <circle cx="2.5" cy="2.5" r="1.8" fill="#ef8354" /> 
+                        </pattern>
+                        <filter id="amberGlow">
+                            <feGaussianBlur stdDeviation="1.8" result="blur" />
+                            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                        </filter>
+                    </defs>
+                    
+                    <rect width="100%" height="100%" fill="none" />
+                    <rect width="100%" height="100%" fill="url(#dotGrid)" opacity="0.08" />
+                    
+                    <rect width="100%" height="100%" fill="url(#dotGrid)" mask="url(#textMask)" filter="url(#amberGlow)" />
+                </svg>
+            </div>
+            <div class="timer-controls">
+                <button class="timer-btn" id="startPauseBtn" onclick="toggleTimer()">Engage</button>
+                <button class="timer-btn" onclick="resetTimer()">Reset</button>
+            </div>
+        </div>
+
+        <div class="header-banner">
+            <div>
+                <h2 id="viewHeader" style="margin: 0; font-weight: 400; letter-spacing: 2px; text-transform: uppercase;">TOPIC SELECTION</h2>
+                <p id="viewSource" style="color: var(--silver); font-size: 12px; margin: 8px 0 0; text-transform: uppercase; letter-spacing: 1px;">SOURCE</p>
+            </div>
+            <div class="donut-container">
+                <svg class="donut-svg" width="80" height="80">
+                    <circle class="donut-bg" cx="40" cy="40" r="35"></circle>
+                    <circle id="donutFill" class="donut-fill" cx="40" cy="40" r="35"></circle>
+                </svg>
+                <div class="donut-text" id="donutLabel">0%</div>
+            </div>
+        </div>
+        <div class="list-container" id="questionList"></div>
+    </div>
+
+<script>
+        let seconds = 0;
+        let timerInterval = null;
+        let isRunning = false;
+
+        const masterData = {
+            "ExamTopics": {
+                "Topic 1": [
+                    { q: 1, url: "https://www.examtopics.com/discussions/microsoft/view/152988-exam-dp-700-topic-1-question-1-discussion/" },
+                    { q: 2, url: "https://www.examtopics.com/discussions/microsoft/view/152626-exam-dp-700-topic-1-question-2-discussion/" },
+                    { q: 3, url: "https://www.examtopics.com/discussions/microsoft/view/152696-exam-dp-700-topic-1-question-3-discussion/" },
+                    { q: 4, url: "https://www.examtopics.com/discussions/microsoft/view/152698-exam-dp-700-topic-1-question-4-discussion/" },
+                    { q: 5, url: "https://www.examtopics.com/discussions/microsoft/view/152631-exam-dp-700-topic-1-question-5-discussion/" },
+                    { q: 6, url: "https://www.examtopics.com/discussions/microsoft/view/153079-exam-dp-700-topic-1-question-6-discussion/" },
+                    { q: 7, url: "https://www.examtopics.com/discussions/microsoft/view/152700-exam-dp-700-topic-1-question-7-discussion/" },
+                    { q: 8, url: "https://www.examtopics.com/discussions/microsoft/view/152701-exam-dp-700-topic-1-question-8-discussion/" },
+                    { q: 9, url: "https://www.examtopics.com/discussions/microsoft/view/152633-exam-dp-700-topic-1-question-9-discussion/" },
+                    { q: 10, url: "https://www.examtopics.com/discussions/microsoft/view/152702-exam-dp-700-topic-1-question-10-discussion/" },
+                    { q: 11, url: "https://www.examtopics.com/discussions/microsoft/view/153078-exam-dp-700-topic-1-question-11-discussion/" },
+                    { q: 12, url: "https://www.examtopics.com/discussions/microsoft/view/152704-exam-dp-700-topic-1-question-12-discussion/" },
+                    { q: 13, url: "https://www.examtopics.com/discussions/microsoft/view/152991-exam-dp-700-topic-1-question-13-discussion/" },
+                    { q: 14, url: "https://www.examtopics.com/discussions/microsoft/view/152690-exam-dp-700-topic-1-question-14-discussion/" },
+                    { q: 15, url: "https://www.examtopics.com/discussions/microsoft/view/152676-exam-dp-700-topic-1-question-15-discussion/" },
+                    { q: 16, url: "https://www.examtopics.com/discussions/microsoft/view/152675-exam-dp-700-topic-1-question-16-discussion/" },
+                    { q: 17, url: "https://www.examtopics.com/discussions/microsoft/view/153605-exam-dp-700-topic-1-question-17-discussion/" },
+                    { q: 18, url: "https://www.examtopics.com/discussions/microsoft/view/152939-exam-dp-700-topic-1-question-18-discussion/" },
+                    { q: 19, url: "https://www.examtopics.com/discussions/microsoft/view/153607-exam-dp-700-topic-1-question-19-discussion/" },
+                    { q: 20, url: "https://www.examtopics.com/discussions/microsoft/view/152871-exam-dp-700-topic-1-question-20-discussion/" },
+                    { q: 21, url: "https://www.examtopics.com/discussions/microsoft/view/152941-exam-dp-700-topic-1-question-21-discussion/" },
+                    { q: 22, url: "https://www.examtopics.com/discussions/microsoft/view/152873-exam-dp-700-topic-1-question-22-discussion/" },
+                    { q: 23, url: "https://www.examtopics.com/discussions/microsoft/view/155287-exam-dp-700-topic-1-question-23-discussion/" },
+                    { q: 24, url: "https://www.examtopics.com/discussions/microsoft/view/155288-exam-dp-700-topic-1-question-24-discussion/" },
+                    { q: 25, url: "https://www.examtopics.com/discussions/microsoft/view/153655-exam-dp-700-topic-1-question-25-discussion/" },
+                    { q: 26, url: "https://www.examtopics.com/discussions/microsoft/view/155289-exam-dp-700-topic-1-question-26-discussion/" },
+                    { q: 27, url: "https://www.examtopics.com/discussions/microsoft/view/155338-exam-dp-700-topic-1-question-27-discussion/" },
+                    { q: 28, url: "https://www.examtopics.com/discussions/microsoft/view/153656-exam-dp-700-topic-1-question-28-discussion/" },
+                    { q: 29, url: "https://www.examtopics.com/discussions/microsoft/view/153657-exam-dp-700-topic-1-question-29-discussion/" },
+                    { q: 30, url: "https://www.examtopics.com/discussions/microsoft/view/153719-exam-dp-700-topic-1-question-30-discussion/" },
+                    { q: 31, url: "https://www.examtopics.com/discussions/microsoft/view/154903-exam-dp-700-topic-1-question-31-discussion/" },
+                    { q: 32, url: "https://www.examtopics.com/discussions/microsoft/view/153705-exam-dp-700-topic-1-question-32-discussion/" },
+                    { q: 33, url: "https://www.examtopics.com/discussions/microsoft/view/153011-exam-dp-700-topic-1-question-33-discussion/" },
+                    { q: 34, url: "https://www.examtopics.com/discussions/microsoft/view/152985-exam-dp-700-topic-1-question-34-discussion/" },
+                    { q: 35, url: "https://www.examtopics.com/discussions/microsoft/view/153002-exam-dp-700-topic-1-question-35-discussion/" },
+                    { q: 36, url: "https://www.examtopics.com/discussions/microsoft/view/152987-exam-dp-700-topic-1-question-36-discussion/" },
+                    { q: 37, url: "https://www.examtopics.com/discussions/microsoft/view/302425-exam-dp-700-topic-1-question-37-discussion/" },
+                    { q: 38, url: "https://www.examtopics.com/discussions/microsoft/view/302426-exam-dp-700-topic-1-question-38-discussion/" },
+                    { q: 39, url: "https://www.examtopics.com/discussions/microsoft/view/302427-exam-dp-700-topic-1-question-39-discussion/" },
+                    { q: 40, url: "https://www.examtopics.com/discussions/microsoft/view/302428-exam-dp-700-topic-1-question-40-discussion/" },
+                    { q: 41, url: "https://www.examtopics.com/discussions/microsoft/view/302429-exam-dp-700-topic-1-question-41-discussion/" },
+                    { q: 42, url: "https://www.examtopics.com/discussions/microsoft/view/302431-exam-dp-700-topic-1-question-42-discussion/" },
+                    { q: 43, url: "https://www.examtopics.com/discussions/microsoft/view/302432-exam-dp-700-topic-1-question-43-discussion/" },
+                    { q: 44, url: "https://www.examtopics.com/discussions/microsoft/view/302632-exam-dp-700-topic-1-question-44-discussion/" },
+                    { q: 45, url: "https://www.examtopics.com/discussions/microsoft/view/302435-exam-dp-700-topic-1-question-45-discussion/" },
+                    { q: 46, url: "https://www.examtopics.com/discussions/microsoft/view/302436-exam-dp-700-topic-1-question-46-discussion/" },
+                    { q: 47, url: "https://www.examtopics.com/discussions/microsoft/view/302440-exam-dp-700-topic-1-question-47-discussion/" },
+                    { q: 48, url: "https://www.examtopics.com/discussions/microsoft/view/302441-exam-dp-700-topic-1-question-48-discussion/" },
+                    { q: 49, url: "https://www.examtopics.com/discussions/microsoft/view/302442-exam-dp-700-topic-1-question-49-discussion/" },
+                    { q: 50, url: "https://www.examtopics.com/discussions/microsoft/view/302443-exam-dp-700-topic-1-question-50-discussion/" },
+                    { q: 51, url: "https://www.examtopics.com/discussions/microsoft/view/302444-exam-dp-700-topic-1-question-51-discussion/" },
+                    { q: 52, url: "https://www.examtopics.com/discussions/microsoft/view/302445-exam-dp-700-topic-1-question-52-discussion/" },
+                    { q: 53, url: "https://www.examtopics.com/discussions/microsoft/view/302455-exam-dp-700-topic-1-question-53-discussion/" },
+                    { q: 54, url: "https://www.examtopics.com/discussions/microsoft/view/302456-exam-dp-700-topic-1-question-54-discussion/" },
+                    { q: 55, url: "https://www.examtopics.com/discussions/microsoft/view/302458-exam-dp-700-topic-1-question-55-discussion/" },
+                    { q: 56, url: "https://www.examtopics.com/discussions/microsoft/view/304638-exam-dp-700-topic-1-question-56-discussion/" },
+                    { q: 57, url: "https://www.examtopics.com/discussions/microsoft/view/304634-exam-dp-700-topic-1-question-57-discussion/" },
+                    { q: 58, url: "https://www.examtopics.com/discussions/microsoft/view/304635-exam-dp-700-topic-1-question-58-discussion/" },
+                    { q: 59, url: "https://www.examtopics.com/discussions/microsoft/view/304636-exam-dp-700-topic-1-question-59-discussion/" },
+                    { q: 60, url: "https://www.examtopics.com/discussions/microsoft/view/304637-exam-dp-700-topic-1-question-60-discussion/" },
+                    { q: 61, url: "https://www.examtopics.com/discussions/microsoft/view/382599-exam-dp-700-topic-1-question-61-discussion/" }
+                ],
+                "Topic 2": [
+                    { q: 1, url: "https://www.examtopics.com/discussions/microsoft/view/153709-exam-dp-700-topic-2-question-1-discussion/" },
+                    { q: 2, url: "https://www.examtopics.com/discussions/microsoft/view/153710-exam-dp-700-topic-2-question-2-discussion/" },
+                    { q: 3, url: "https://www.examtopics.com/discussions/microsoft/view/154905-exam-dp-700-topic-2-question-3-discussion/" },
+                    { q: 4, url: "https://www.examtopics.com/discussions/microsoft/view/153711-exam-dp-700-topic-2-question-4-discussion/" },
+                    { q: 5, url: "https://www.examtopics.com/discussions/microsoft/view/154682-exam-dp-700-topic-2-question-5-discussion/" },
+                    { q: 6, url: "https://www.examtopics.com/discussions/microsoft/view/155366-exam-dp-700-topic-2-question-6-discussion/" },
+                    { q: 7, url: "https://www.examtopics.com/discussions/microsoft/view/154776-exam-dp-700-topic-2-question-7-discussion/" },
+                    { q: 8, url: "https://www.examtopics.com/discussions/microsoft/view/155368-exam-dp-700-topic-2-question-8-discussion/" },
+                    { q: 9, url: "https://www.examtopics.com/discussions/microsoft/view/153727-exam-dp-700-topic-2-question-9-discussion/" },
+                    { q: 10, url: "https://www.examtopics.com/discussions/microsoft/view/153737-exam-dp-700-topic-2-question-10-discussion/" },
+                    { q: 11, url: "https://www.examtopics.com/discussions/microsoft/view/155370-exam-dp-700-topic-2-question-11-discussion/" },
+                    { q: 12, url: "https://www.examtopics.com/discussions/microsoft/view/154783-exam-dp-700-topic-2-question-12-discussion/" },
+                    { q: 13, url: "https://www.examtopics.com/discussions/microsoft/view/152972-exam-dp-700-topic-2-question-13-discussion/" },
+                    { q: 14, url: "https://www.examtopics.com/discussions/microsoft/view/155411-exam-dp-700-topic-2-question-14-discussion/" },
+                    { q: 15, url: "https://www.examtopics.com/discussions/microsoft/view/152974-exam-dp-700-topic-2-question-15-discussion/" },
+                    { q: 16, url: "https://www.examtopics.com/discussions/microsoft/view/155696-exam-dp-700-topic-2-question-16-discussion/" },
+                    { q: 17, url: "https://www.examtopics.com/discussions/microsoft/view/153840-exam-dp-700-topic-2-question-17-discussion/" },
+                    { q: 18, url: "https://www.examtopics.com/discussions/microsoft/view/153740-exam-dp-700-topic-2-question-18-discussion/" },
+                    { q: 19, url: "https://www.examtopics.com/discussions/microsoft/view/153741-exam-dp-700-topic-2-question-19-discussion/" },
+                    { q: 20, url: "https://www.examtopics.com/discussions/microsoft/view/153742-exam-dp-700-topic-2-question-20-discussion/" },
+                    { q: 21, url: "https://www.examtopics.com/discussions/microsoft/view/153743-exam-dp-700-topic-2-question-21-discussion/" },
+                    { q: 22, url: "https://www.examtopics.com/discussions/microsoft/view/302487-exam-dp-700-topic-2-question-22-discussion/" },
+                    { q: 23, url: "https://www.examtopics.com/discussions/microsoft/view/302566-exam-dp-700-topic-2-question-23-discussion/" },
+                    { q: 24, url: "https://www.examtopics.com/discussions/microsoft/view/302494-exam-dp-700-topic-2-question-24-discussion/" },
+                    { q: 25, url: "https://www.examtopics.com/discussions/microsoft/view/302461-exam-dp-700-topic-2-question-25-discussion/" },
+                    { q: 26, url: "https://www.examtopics.com/discussions/microsoft/view/302541-exam-dp-700-topic-2-question-26-discussion/" },
+                    { q: 27, url: "https://www.examtopics.com/discussions/microsoft/view/302721-exam-dp-700-topic-2-question-27-discussion/" },
+                    { q: 28, url: "https://www.examtopics.com/discussions/microsoft/view/302715-exam-dp-700-topic-2-question-28-discussion/" },
+                    { q: 29, url: "https://www.examtopics.com/discussions/microsoft/view/302463-exam-dp-700-topic-2-question-29-discussion/" },
+                    { q: 30, url: "https://www.examtopics.com/discussions/microsoft/view/302465-exam-dp-700-topic-2-question-30-discussion/" },
+                    { q: 31, url: "https://www.examtopics.com/discussions/microsoft/view/302466-exam-dp-700-topic-2-question-31-discussion/" },
+                    { q: 32, url: "https://www.examtopics.com/discussions/microsoft/view/302467-exam-dp-700-topic-2-question-32-discussion/" },
+                    { q: 33, url: "https://www.examtopics.com/discussions/microsoft/view/302468-exam-dp-700-topic-2-question-33-discussion/" },
+                    { q: 34, url: "https://www.examtopics.com/discussions/microsoft/view/302496-exam-dp-700-topic-2-question-34-discussion/" },
+                    { q: 35, url: "https://www.examtopics.com/discussions/microsoft/view/302763-exam-dp-700-topic-2-question-35-discussion/" },
+                    { q: 36, url: "https://www.examtopics.com/discussions/microsoft/view/302578-exam-dp-700-topic-2-question-36-discussion/" },
+                    { q: 37, url: "https://www.examtopics.com/discussions/microsoft/view/302762-exam-dp-700-topic-2-question-37-discussion/" },
+                    { q: 38, url: "https://www.examtopics.com/discussions/microsoft/view/302764-exam-dp-700-topic-2-question-38-discussion/" },
+                    { q: 39, url: "https://www.examtopics.com/discussions/microsoft/view/302502-exam-dp-700-topic-2-question-39-discussion/" },
+                    { q: 40, url: "https://www.examtopics.com/discussions/microsoft/view/304593-exam-dp-700-topic-2-question-40-discussion/" },
+                    { q: 41, url: "https://www.examtopics.com/discussions/microsoft/view/304573-exam-dp-700-topic-2-question-41-discussion/" },
+                    { q: 42, url: "https://www.examtopics.com/discussions/microsoft/view/304574-exam-dp-700-topic-2-question-42-discussion/" },
+                    { q: 43, url: "https://www.examtopics.com/discussions/microsoft/view/383531-exam-dp-700-topic-2-question-43-discussion/" },
+                    { q: 44, url: "https://www.examtopics.com/discussions/microsoft/view/382627-exam-dp-700-topic-2-question-44-discussion/" },
+                    { q: 45, url: "https://www.examtopics.com/discussions/microsoft/view/382628-exam-dp-700-topic-2-question-45-discussion/" },
+                    { q: 46, url: "https://www.examtopics.com/discussions/microsoft/view/389918-exam-dp-700-topic-2-question-46-discussion/" },
+                    { q: 47, url: "https://www.examtopics.com/discussions/microsoft/view/382781-exam-dp-700-topic-2-question-47-discussion/" },
+                    { q: 48, url: "https://www.examtopics.com/discussions/microsoft/view/382782-exam-dp-700-topic-2-question-48-discussion/" }
+                ],
+                "Topic 3": [
+                    { q: 1, url: "https://www.examtopics.com/discussions/microsoft/view/154684-exam-dp-700-topic-3-question-1-discussion/" },
+                    { q: 2, url: "https://www.examtopics.com/discussions/microsoft/view/153744-exam-dp-700-topic-3-question-2-discussion/" },
+                    { q: 3, url: "https://www.examtopics.com/discussions/microsoft/view/155698-exam-dp-700-topic-3-question-3-discussion/" },
+                    { q: 4, url: "https://www.examtopics.com/discussions/microsoft/view/154679-exam-dp-700-topic-3-question-4-discussion/" },
+                    { q: 5, url: "https://www.examtopics.com/discussions/microsoft/view/153754-exam-dp-700-topic-3-question-5-discussion/" },
+                    { q: 6, url: "https://www.examtopics.com/discussions/microsoft/view/153755-exam-dp-700-topic-3-question-6-discussion/" },
+                    { q: 7, url: "https://www.examtopics.com/discussions/microsoft/view/153756-exam-dp-700-topic-3-question-7-discussion/" },
+                    { q: 8, url: "https://www.examtopics.com/discussions/microsoft/view/153757-exam-dp-700-topic-3-question-8-discussion/" },
+                    { q: 9, url: "https://www.examtopics.com/discussions/microsoft/view/153758-exam-dp-700-topic-3-question-9-discussion/" },
+                    { q: 10, url: "https://www.examtopics.com/discussions/microsoft/view/155699-exam-dp-700-topic-3-question-10-discussion/" },
+                    { q: 11, url: "https://www.examtopics.com/discussions/microsoft/view/302562-exam-dp-700-topic-3-question-11-discussion/" },
+                    { q: 12, url: "https://www.examtopics.com/discussions/microsoft/view/302503-exam-dp-700-topic-3-question-12-discussion/" },
+                    { q: 13, url: "https://www.examtopics.com/discussions/microsoft/view/302546-exam-dp-700-topic-3-question-13-discussion/" },
+                    { q: 14, url: "https://www.examtopics.com/discussions/microsoft/view/302447-exam-dp-700-topic-3-question-14-discussion/" },
+                    { q: 15, url: "https://www.examtopics.com/discussions/microsoft/view/304614-exam-dp-700-topic-3-question-15-discussion/" },
+                    { q: 16, url: "https://www.examtopics.com/discussions/microsoft/view/304566-exam-dp-700-topic-3-question-16-discussion/" }
+                ]
+            }
+        };
+
+        const sourceDropdown = document.getElementById('sourceDropdown');
+        const topicDropdown = document.getElementById('topicDropdown');
+        const list = document.getElementById('questionList');
+        const searchInput = document.getElementById('searchInput');
+        const header = document.getElementById('viewHeader');
+        const sourceLabel = document.getElementById('viewSource');
+        const donutFill = document.getElementById('donutFill');
+        const donutLabel = document.getElementById('donutLabel');
+        
+        let checkedItems = JSON.parse(localStorage.getItem('dp700_progress_v3')) || {};
+        let savedNotes = JSON.parse(localStorage.getItem('dp700_notes_v3')) || {};
+
+        function updateProgress() {
+            let totalOverall = 0;
+            let completedOverall = Object.keys(checkedItems).length;
+            Object.keys(masterData).forEach(src => {
+                Object.keys(masterData[src]).forEach(top => {
+                    totalOverall += masterData[src][top].length;
+                });
+            });
+            const overallPercent = totalOverall > 0 ? Math.round((completedOverall / totalOverall) * 100) : 0;
+            document.getElementById('progressFill').style.width = overallPercent + '%';
+            document.getElementById('progressText').innerText = overallPercent + '%';
+
+            const currentSource = sourceDropdown.value;
+            const currentTopic = topicDropdown.value;
+            const topicQuestions = masterData[currentSource][currentTopic] || [];
+            let completedTopic = 0;
+            topicQuestions.forEach(item => {
+                const qKey = `${currentSource}_${currentTopic}_Q${item.q}`;
+                if (checkedItems[qKey]) completedTopic++;
+            });
+            
+            const topicPercent = topicQuestions.length > 0 ? Math.round((completedTopic / topicQuestions.length) * 100) : 0;
+            document.getElementById('topicPercent').innerText = topicPercent + '%';
+            donutLabel.innerText = topicPercent + '%';
+            const offset = 220 - (220 * topicPercent) / 100;
+            donutFill.style.strokeDashoffset = offset;
+        }
+
+        window.toggleCheck = function(qKey, event) {
+            event.stopPropagation();
+            if (checkedItems[qKey]) { delete checkedItems[qKey]; } 
+            else { checkedItems[qKey] = true; }
+            saveAndSync();
+        }
+
+        window.saveNote = function(qKey, text) {
+            savedNotes[qKey] = text;
+            localStorage.setItem('dp700_notes_v3', JSON.stringify(savedNotes));
+        }
+
+        function saveAndSync() {
+            localStorage.setItem('dp700_progress_v3', JSON.stringify(checkedItems));
+            render();
+            updateProgress();
+        }
+
+        function render() {
+            const sourceValue = sourceDropdown.value;
+            const topicValue = topicDropdown.value;
+            const searchTerm = searchInput.value.toLowerCase();
+            
+            header.innerText = topicDropdown.options[topicDropdown.selectedIndex].text.toUpperCase();
+            sourceLabel.innerText = sourceDropdown.options[sourceDropdown.selectedIndex].text.toUpperCase();
+
+            const currentQuestions = masterData[sourceValue][topicValue] || [];
+            list.innerHTML = currentQuestions
+                .filter(item => `Question ${item.q}`.toLowerCase().includes(searchTerm) || (savedNotes[`${sourceValue}_${topicValue}_Q${item.q}`] || "").toLowerCase().includes(searchTerm))
+                .map(item => {
+                    const qKey = `${sourceValue}_${topicValue}_Q${item.q}`;
+                    const isActive = checkedItems[qKey] ? 'active' : '';
+                    const currentNote = savedNotes[qKey] || "";
+
+                    return `
+                        <div class="list-item">
+                            <div class="check-btn ${isActive}" onclick="toggleCheck('${qKey}', event)"></div>
+                            <a href="${item.url}" target="_blank" class="q-link" style="flex: 0 0 120px;">
+                                <span class="q-id">QUESTION ${item.q}</span>
+                            </a>
+                            <input type="text" 
+                                   value="${currentNote}" 
+                                   placeholder="Click to add description..." 
+                                   oninput="saveNote('${qKey}', this.value)"
+                                   style="background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--silver); flex: 1; padding: 5px; font-family: var(--font-din); outline: none; margin: 0 15px;">
+                            <span class="go-icon">→</span>
+                        </div>
+                    `;
+                }).join('');
+            updateProgress();
+        }
+
+        function toggleTimer() {
+            const btn = document.getElementById('startPauseBtn');
+            if (!isRunning) {
+                isRunning = true;
+                btn.innerText = "Halt";
+                btn.classList.add('active');
+                timerInterval = setInterval(() => {
+                    seconds++;
+                    updateSVGTimer();
+                }, 1000);
+            } else {
+                isRunning = false;
+                btn.innerText = "Engage";
+                btn.classList.remove('active');
+                clearInterval(timerInterval);
+            }
+        }
+
+        function resetTimer() {
+            seconds = 0;
+            updateSVGTimer();
+            if (isRunning) toggleTimer();
+        }
+
+        function updateSVGTimer() {
+            const hrs = Math.floor(seconds / 3600).toString().padStart(2, '0');
+            const mins = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+            const secs = (seconds % 60).toString().padStart(2, '0');
+            document.getElementById('svgTime').textContent = `${hrs}:${mins}:${secs}`;
+        }
+
+        window.resetTopic = function() {
+            const currentSource = sourceDropdown.value;
+            const currentTopic = topicDropdown.value;
+            if (confirm(`Reset progress for ${currentTopic}?`)) {
+                masterData[currentSource][currentTopic].forEach(item => {
+                    delete checkedItems[`${currentSource}_${currentTopic}_Q${item.q}`];
+                });
+                saveAndSync();
+            }
+        }
+
+        window.resetAll = function() {
+            if (confirm("Permanently wipe all course progress data?")) {
+                checkedItems = {};
+                savedNotes = {};
+                localStorage.removeItem('dp700_notes_v3');
+                saveAndSync();
+            }
+        }
+
+        sourceDropdown.onchange = render;
+        topicDropdown.onchange = render;
+        searchInput.oninput = render;
+        render();
+    </script>
+</body>
+</html>
