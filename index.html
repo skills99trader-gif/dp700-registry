@@ -112,6 +112,50 @@
             border: 1px solid rgba(126, 184, 201, 0.4);
             padding: 4px 10px; border-radius: 3px; margin-top: 8px;
         }
+
+        /* Accordion Dropdown Styles for Grouped Case Studies */
+        .accordion-section {
+            margin-bottom: 20px;
+            border: 1px solid rgba(126, 184, 201, 0.2);
+            border-radius: 4px;
+            background: rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .accordion-header {
+            background: rgba(126, 184, 201, 0.1);
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.3s;
+        }
+        .accordion-header:hover {
+            background: rgba(126, 184, 201, 0.2);
+        }
+        .accordion-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--case-study);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .accordion-icon {
+            color: var(--case-study);
+            font-size: 16px;
+            transition: transform 0.3s ease;
+        }
+        .accordion-section.collapsed .accordion-icon {
+            transform: rotate(-90deg);
+        }
+        .accordion-content {
+            padding: 15px;
+            display: block;
+        }
+        .accordion-section.collapsed .accordion-content {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -245,7 +289,7 @@
                 { q: 49, url: "https://www.examtopics.com/discussions/microsoft/view/302442-exam-dp-700-topic-1-question-49-discussion/" },
                 { q: 50, url: "https://www.examtopics.com/discussions/microsoft/view/302443-exam-dp-700-topic-1-question-50-discussion/" },
                 { q: 51, url: "https://www.examtopics.com/discussions/microsoft/view/302444-exam-dp-700-topic-1-question-51-discussion/" },
-                { q: 52, url: "https://www.examtopics.com/discussions/microsoft/view/302445-exam-dp-700-topic-1-question-52-discussion/" },
+                { q: 52, fill: "none", url: "https://www.examtopics.com/discussions/microsoft/view/302445-exam-dp-700-topic-1-question-52-discussion/" },
                 { q: 53, url: "https://www.examtopics.com/discussions/microsoft/view/302455-exam-dp-700-topic-1-question-53-discussion/" },
                 { q: 54, url: "https://www.examtopics.com/discussions/microsoft/view/302456-exam-dp-700-topic-1-question-54-discussion/" },
                 { q: 55, url: "https://www.examtopics.com/discussions/microsoft/view/302458-exam-dp-700-topic-1-question-55-discussion/" },
@@ -255,12 +299,12 @@
                 { q: 59, url: "https://www.examtopics.com/discussions/microsoft/view/304636-exam-dp-700-topic-1-question-59-discussion/" },
                 { q: 60, url: "https://www.examtopics.com/discussions/microsoft/view/304637-exam-dp-700-topic-1-question-60-discussion/" },
                 { q: 61, url: "https://www.examtopics.com/discussions/microsoft/view/382599-exam-dp-700-topic-1-question-61-discussion/" },
-		{ q: 62, url: "https://www.examtopics.com/discussions/microsoft/view/407086-exam-dp-700-topic-1-question-62-discussion/" },
-  		{ q: 63, url: "https://www.examtopics.com/discussions/microsoft/view/407087-exam-dp-700-topic-1-question-63-discussion/" },       	
-		{ q: 64, url: "https://www.examtopics.com/discussions/microsoft/view/407116-exam-dp-700-topic-1-question-64-discussion/"}, 
-		{ q: 66, url: "https://www.examtopics.com/discussions/microsoft/view/407118-exam-dp-700-topic-1-question-66-discussion/"}, 
-		{ q: 67, url: "https://www.examtopics.com/discussions/microsoft/view/407119-exam-dp-700-topic-1-question-67-discussion/"}, 
-		{ q: 68, url: "https://www.examtopics.com/discussions/microsoft/view/407120-exam-dp-700-topic-1-question-68-discussion/"}
+                { q: 62, url: "https://www.examtopics.com/discussions/microsoft/view/407086-exam-dp-700-topic-1-question-62-discussion/" },
+                { q: 63, url: "https://www.examtopics.com/discussions/microsoft/view/407087-exam-dp-700-topic-1-question-63-discussion/" },           
+                { q: 64, url: "https://www.examtopics.com/discussions/microsoft/view/407116-exam-dp-700-topic-1-question-64-discussion/"}, 
+                { q: 66, url: "https://www.examtopics.com/discussions/microsoft/view/407118-exam-dp-700-topic-1-question-66-discussion/"}, 
+                { q: 67, url: "https://www.examtopics.com/discussions/microsoft/view/407119-exam-dp-700-topic-1-question-67-discussion/"}, 
+                { q: 68, url: "https://www.examtopics.com/discussions/microsoft/view/407120-exam-dp-700-topic-1-question-68-discussion/"}
             ],
             "Topic 2": [
                 { q: 1, url: "https://www.examtopics.com/discussions/microsoft/view/153709-exam-dp-700-topic-2-question-1-discussion/" },
@@ -352,6 +396,8 @@
     
     let checkedItems = JSON.parse(localStorage.getItem('dp700_progress_v3')) || {};
     let savedNotes = JSON.parse(localStorage.getItem('dp700_notes_v3')) || {};
+    // Tracks open/closed state of accordion groups
+    let accordionStates = JSON.parse(localStorage.getItem('dp700_accordion_states')) || { contoso: true, litware: true, other: true };
 
     /**
      * Collects all questions from all topics whose saved note/description
@@ -376,6 +422,23 @@
 
     function isCaseStudiesMode() {
         return topicDropdown.value === CASE_STUDIES_KEY;
+    }
+
+    /**
+     * Updates the text labels inside the Topic select box to show current question counts
+     */
+    function updateDropdownLabels() {
+        const sourceValue = sourceDropdown.value;
+        
+        const t1Count = masterData[sourceValue]["Topic 1"].length;
+        const t2Count = masterData[sourceValue]["Topic 2"].length;
+        const t3Count = masterData[sourceValue]["Topic 3"].length;
+        const csCount = getCaseStudyQuestions(sourceValue).length;
+
+        topicDropdown.options[0].text = `Topic 1: Data Ingestion (${t1Count})`;
+        topicDropdown.options[1].text = `Topic 2: Data Modeling (${t2Count})`;
+        topicDropdown.options[2].text = `Topic 3: Monitor & Optimize (${t3Count})`;
+        topicDropdown.options[3].text = `★ Case Studies (${csCount})`;
     }
 
     function updateProgress() {
@@ -414,6 +477,9 @@
         donutLabel.innerText = topicPercent + '%';
         const offset = 220 - (220 * topicPercent) / 100;
         donutFill.style.strokeDashoffset = offset;
+
+        // Also update selection text counts dynamically whenever progress triggers an adjustment
+        updateDropdownLabels();
     }
 
     window.toggleCheck = function(qKey, event) {
@@ -426,12 +492,20 @@
     window.saveNote = function(qKey, text, isCS) {
         savedNotes[qKey] = text;
         localStorage.setItem('dp700_notes_v3', JSON.stringify(savedNotes));
-        // If in case study mode or not, re-check if the note change affects case study membership
-        // Just update progress — full re-render only if in CS mode (note change may add/remove items)
-        if (isCS) {
-            render();
-        } else {
-            updateProgress();
+        // If a description changes, re-render immediately to check if grouping changes
+        render();
+    }
+
+    window.toggleAccordion = function(groupKey) {
+        accordionStates[groupKey] = !accordionStates[groupKey];
+        localStorage.setItem('dp700_accordion_states', JSON.stringify(accordionStates));
+        const element = document.getElementById(`accordion-${groupKey}`);
+        if (element) {
+            if (accordionStates[groupKey]) {
+                element.classList.remove('collapsed');
+            } else {
+                element.classList.add('collapsed');
+            }
         }
     }
 
@@ -441,20 +515,60 @@
         updateProgress();
     }
 
+    function buildQuestionHTML(item, isCS) {
+        const isActive = checkedItems[item.qKey || `${sourceDropdown.value}_${topicDropdown.value}_Q${item.q}`] ? 'active' : '';
+        const qKey = item.qKey || `${sourceDropdown.value}_${topicDropdown.value}_Q${item.q}`;
+        const currentNote = (savedNotes[qKey] || '').replace(/"/g, '&quot;');
+        
+        if (isCS) {
+            const topicShort = item.topic.replace('Topic ', 'T');
+            return `
+                <div class="list-item case-study-item">
+                    <div class="check-btn ${isActive}" onclick="toggleCheck('${item.qKey}', event)"></div>
+                    <span class="topic-badge">${topicShort}</span>
+                    <a href="${item.url}" target="_blank" class="q-link" style="flex: 0 0 120px;">
+                        <span class="q-id">Q ${item.q}</span>
+                    </a>
+                    <input type="text" 
+                           value="${currentNote}" 
+                           placeholder="Click to edit description..." 
+                           oninput="saveNote('${item.qKey}', this.value, true)"
+                           style="background: transparent; border: none; border-bottom: 1px solid rgba(126,184,201,0.15); color: var(--case-study); flex: 1; padding: 5px; font-family: var(--font-din); outline: none; margin: 0 15px;">
+                    <span class="go-icon" style="color: var(--case-study);">→</span>
+                </div>
+            `;
+        } else {
+            return `
+                <div class="list-item">
+                    <div class="check-btn ${isActive}" onclick="toggleCheck('${qKey}', event)"></div>
+                    <a href="${item.url}" target="_blank" class="q-link" style="flex: 0 0 120px;">
+                        <span class="q-id">QUESTION ${item.q}</span>
+                    </a>
+                    <input type="text" 
+                           value="${currentNote}" 
+                           placeholder="Click to add description..." 
+                           oninput="saveNote('${qKey}', this.value, false)"
+                           style="background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--silver); flex: 1; padding: 5px; font-family: var(--font-din); outline: none; margin: 0 15px;">
+                    <span class="go-icon">→</span>
+                </div>
+            `;
+        }
+    }
+
     function render() {
         const sourceValue = sourceDropdown.value;
         const topicValue = topicDropdown.value;
         const searchTerm = searchInput.value.toLowerCase();
         const csMode = isCaseStudiesMode();
 
-        // Header
+        // Header View Customizer
         if (csMode) {
             header.innerText = '★ CASE STUDIES';
             headerBanner.classList.add('case-study-mode');
             csBadge.style.display = 'inline-block';
             donutFill.classList.add('case-study-fill');
         } else {
-            header.innerText = topicDropdown.options[topicDropdown.selectedIndex].text.toUpperCase();
+            header.innerText = topicDropdown.options[topicDropdown.selectedIndex].text.split(' (')[0].toUpperCase();
             headerBanner.classList.remove('case-study-mode');
             csBadge.style.display = 'none';
             donutFill.classList.remove('case-study-fill');
@@ -462,8 +576,9 @@
         sourceLabel.innerText = sourceDropdown.options[sourceDropdown.selectedIndex].text.toUpperCase();
 
         if (csMode) {
-            // Case Studies mode: collect all questions whose description matches
             const csQuestions = getCaseStudyQuestions(sourceValue);
+            
+            // Filter global items via search input matches
             const filtered = csQuestions.filter(item => {
                 const note = savedNotes[item.qKey] || '';
                 return (
@@ -483,30 +598,76 @@
                     </div>
                 `;
             } else {
-                list.innerHTML = filtered.map(item => {
-                    const isActive = checkedItems[item.qKey] ? 'active' : '';
-                    const currentNote = (savedNotes[item.qKey] || '').replace(/"/g, '&quot;');
-                    // Short topic label e.g. "T1", "T2"
-                    const topicShort = item.topic.replace('Topic ', 'T');
-                    return `
-                        <div class="list-item case-study-item">
-                            <div class="check-btn ${isActive}" onclick="toggleCheck('${item.qKey}', event)"></div>
-                            <span class="topic-badge">${topicShort}</span>
-                            <a href="${item.url}" target="_blank" class="q-link" style="flex: 0 0 120px;">
-                                <span class="q-id">Q ${item.q}</span>
-                            </a>
-                            <input type="text" 
-                                   value="${currentNote}" 
-                                   placeholder="Click to edit description..." 
-                                   oninput="saveNote('${item.qKey}', this.value, true)"
-                                   style="background: transparent; border: none; border-bottom: 1px solid rgba(126,184,201,0.15); color: var(--case-study); flex: 1; padding: 5px; font-family: var(--font-din); outline: none; margin: 0 15px;">
-                            <span class="go-icon" style="color: var(--case-study);">→</span>
+                // Group buckets criteria arrays
+                const contosoGroup = [];
+                const litwareGroup = [];
+                const otherGroup = [];
+
+                filtered.forEach(item => {
+                    const note = (savedNotes[item.qKey] || '').toLowerCase();
+                    if (note.includes('contoso')) {
+                        contosoGroup.push(item);
+                    } else if (note.includes('litware')) {
+                        litwareGroup.push(item);
+                    } else {
+                        otherGroup.push(item);
+                    }
+                });
+
+                let finalHTML = '';
+
+                // Contoso Accordion Section Container
+                if (contosoGroup.length > 0) {
+                    const isCollapsed = !accordionStates.contoso ? 'collapsed' : '';
+                    finalHTML += `
+                        <div class="accordion-section ${isCollapsed}" id="accordion-contoso">
+                            <div class="accordion-header" onclick="toggleAccordion('contoso')">
+                                <div class="accordion-title">Case Study: Contoso (${contosoGroup.length})</div>
+                                <div class="accordion-icon">▼</div>
+                            </div>
+                            <div class="accordion-content">
+                                ${contosoGroup.map(item => buildQuestionHTML(item, true)).join('')}
+                            </div>
                         </div>
                     `;
-                }).join('');
+                }
+
+                // Litware Accordion Section Container
+                if (litwareGroup.length > 0) {
+                    const isCollapsed = !accordionStates.litware ? 'collapsed' : '';
+                    finalHTML += `
+                        <div class="accordion-section ${isCollapsed}" id="accordion-litware">
+                            <div class="accordion-header" onclick="toggleAccordion('litware')">
+                                <div class="accordion-title">Case Study: Litware (${litwareGroup.length})</div>
+                                <div class="accordion-icon">▼</div>
+                            </div>
+                            <div class="accordion-content">
+                                ${litwareGroup.map(item => buildQuestionHTML(item, true)).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Remaining Case Studies Accordion Container
+                if (otherGroup.length > 0) {
+                    const isCollapsed = !accordionStates.other ? 'collapsed' : '';
+                    finalHTML += `
+                        <div class="accordion-section ${isCollapsed}" id="accordion-other">
+                            <div class="accordion-header" onclick="toggleAccordion('other')">
+                                <div class="accordion-title">Other Case Studies (${otherGroup.length})</div>
+                                <div class="accordion-icon">▼</div>
+                            </div>
+                            <div class="accordion-content">
+                                ${otherGroup.map(item => buildQuestionHTML(item, true)).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                list.innerHTML = finalHTML;
             }
         } else {
-            // Normal topic mode
+            // Normal fallback topic rendering modes
             const currentQuestions = masterData[sourceValue][topicValue] || [];
             list.innerHTML = currentQuestions
                 .filter(item => {
@@ -516,25 +677,7 @@
                         (savedNotes[qKey] || '').toLowerCase().includes(searchTerm)
                     );
                 })
-                .map(item => {
-                    const qKey = `${sourceValue}_${topicValue}_Q${item.q}`;
-                    const isActive = checkedItems[qKey] ? 'active' : '';
-                    const currentNote = (savedNotes[qKey] || '').replace(/"/g, '&quot;');
-                    return `
-                        <div class="list-item">
-                            <div class="check-btn ${isActive}" onclick="toggleCheck('${qKey}', event)"></div>
-                            <a href="${item.url}" target="_blank" class="q-link" style="flex: 0 0 120px;">
-                                <span class="q-id">QUESTION ${item.q}</span>
-                            </a>
-                            <input type="text" 
-                                   value="${currentNote}" 
-                                   placeholder="Click to add description..." 
-                                   oninput="saveNote('${qKey}', this.value, false)"
-                                   style="background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--silver); flex: 1; padding: 5px; font-family: var(--font-din); outline: none; margin: 0 15px;">
-                            <span class="go-icon">→</span>
-                        </div>
-                    `;
-                }).join('');
+                .map(item => buildQuestionHTML(item, false)).join('');
         }
 
         updateProgress();
@@ -588,6 +731,7 @@
             checkedItems = {};
             savedNotes = {};
             localStorage.removeItem('dp700_notes_v3');
+            localStorage.removeItem('dp700_accordion_states');
             saveAndSync();
         }
     }
